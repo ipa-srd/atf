@@ -1,1 +1,4 @@
-# empty
+- git:
+    uri: 'https://github.com/ros/ros_comm.git'
+    local-name: ros_comm
+    version: indigo-devel

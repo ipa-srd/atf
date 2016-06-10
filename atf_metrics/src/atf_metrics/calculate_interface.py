@@ -15,7 +15,6 @@ class CalculateInterfaceParamHandler:
         :param params: Parameter
         """
         metrics = []
-
         if type(params) is not list:
             rospy.logerr("metric config not a list")
             return False
@@ -49,16 +48,16 @@ class CalculateInterface:
     def api_callback(self, msg):
         self.api_dict = self.msg_to_dict(msg)
 
-    def start(self):
+    def start(self, timestamp):
         pass
 
-    def stop(self):
+    def stop(self, timestamp):
         self.finished = True
 
-    def pause(self):
+    def pause(self, timestamp):
         pass
 
-    def purge(self):
+    def purge(self, timestamp):
         pass
 
     def msg_to_dict(self, msg):

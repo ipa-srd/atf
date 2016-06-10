@@ -26,7 +26,7 @@ class CalculatePathLengthParamHandler:
                 groundtruth = metric["groundtruth"]
                 groundtruth_epsilon = metric["groundtruth_epsilon"]
             except (TypeError, KeyError):
-                rospy.logwarn("No groundtruth parameters given, skipping groundtruth evaluation for metric 'path_length'")
+                rospy.logwarn("No groundtruth parameters given, skipping groundtruth evaluation for metric 'path_length' in testblock '%s'", testblock_name)
                 groundtruth = None
                 groundtruth_epsilon = None
             metrics.append(CalculatePathLength(metric["root_frame"], metric["measured_frame"], groundtruth, groundtruth_epsilon))
@@ -47,7 +47,7 @@ class CalculatePathLength:
         self.root_frame = root_frame
         self.measured_frame = measured_frame
         self.path_length = 0.0
-        self.tf_sampling_freq = 100.0  # Hz
+        self.tf_sampling_freq = 20.0  # Hz
         self.first_value = True
         self.trans_old = []
         self.rot_old = []
@@ -59,18 +59,18 @@ class CalculatePathLength:
 
         rospy.Timer(rospy.Duration.from_sec(1 / self.tf_sampling_freq), self.record_tf)
 
-    def start(self):
+    def start(self, timestamp):
         self.active = True
 
-    def stop(self):
+    def stop(self, timestamp):
         self.active = False
         self.finished = True
 
-    def pause(self):
+    def pause(self, timestamp):
         self.active = False
         self.first_value = True
 
-    def purge(self):
+    def purge(self, timestamp):
         pass
 
     def record_tf(self, event):
@@ -79,10 +79,10 @@ class CalculatePathLength:
                 self.listener.waitForTransform(self.root_frame,
                                                self.measured_frame,
                                                rospy.Time(0),
-                                               rospy.Duration.from_sec(2 / self.tf_sampling_freq))
+                                               rospy.Duration.from_sec(1 / (2*self.tf_sampling_freq)))
                 (trans, rot) = self.listener.lookupTransform(self.root_frame, self.measured_frame, rospy.Time(0))
 
-            except (tf.Exception, tf.LookupException, tf.ConnectivityException), e:
+            except (tf.Exception, tf.LookupException, tf.ConnectivityException):
                 #rospy.logwarn(e)
                 pass
             else:

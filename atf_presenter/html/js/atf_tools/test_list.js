@@ -14,6 +14,7 @@ var TestList = {
     $('#test_list_content').show();
   },
   init: function () {
+    console.log("init")
     var test_list = FileStorage.readData(this.name);
     var test_list_div = $('#test_list_content').find('#test_list');
     var compare_test_option = $('#compare_test_option');
@@ -39,7 +40,7 @@ var TestList = {
       var test_error;
       var button_disabled;
       var checkbox_disabled;
-      var test = FileStorage.readData(test_name);
+      var test = FileStorage.readData("merged_" + test_name);
 
       if (!test) {
         upload_status = '<span class="glyphicon glyphicon-alert" aria-hidden="true"></span><span class="sr-only">Error: </span> File not found!';
@@ -90,48 +91,6 @@ var TestList = {
       number++;
     });
   },
-  summarize: function () {
-    var test_list = FileStorage.readData(this.name);
-    var this_class = this;
-    //console.log("test_list=", test_list)
-
-    $.each(test_list, function (test_name, test_config) {
-      //console.log("test_name=", test_name)
-      //console.log("test_config=", test_config)
-      var errors = {
-        planning: {},
-        error: 0
-      };
-      
-      var test_data_complete = FileStorage.readData("ts1_t1");
-      //console.log("test_data_complete=", test_data_complete)
-
-      // Check for errors
-      var test_failed = 0;
-      $.each(errors['planning'], function (testblock_name, errors) {
-        test_failed += errors;
-        if (errors === test_config['subtests'].length) {
-          test_data_complete[testblock_name]['status'] = 'error';
-          return false;
-        } else if ((errors['error'] + errors['planning']) === test_config['subtests'].length) {
-          test_data_complete[testblock_name]['status'] = 'error';
-        }
-      });
-      test_failed += errors['error'];
-      if (errors['error'] === test_config['subtests'].length) {
-        test_data_complete = {};
-        test_data_complete['error'] = 'An error occured outside monitored testblocks. Aborted analysis...';
-      }
-
-      FileStorage.removeData(test_name);
-      if (Object.keys(test_data_complete).length != 0) {
-        test_list[test_name]['tests_failed'] = test_failed;
-        FileStorage.writeData(test_name, test_data_complete);
-      }
-    });
-    FileStorage.removeData(this.name);
-    FileStorage.writeData(this.name, test_list);
-  },
   checkForErrors: function (file) {
     var error = '';
     if (file.hasOwnProperty('error')) {
@@ -147,6 +106,7 @@ var TestList = {
     return error;
   },
   showDetails: function (name) {
+    console.log("showDetails")
     var test_detail_div = $('#detail_test');
     var test_name_split = name.split('_');
     test_detail_div.find('.modal-title').html('Details Testsuite ' + test_name_split[0].replace(/^\D+/g, '') + ' - Test ' + test_name_split[1].replace(/^\D+/g, ''));
@@ -155,7 +115,8 @@ var TestList = {
     test_details.hide();
 
     // Get test data
-    var test_results = FileStorage.readData(name);
+    //console.log("name=", name)
+    var test_results = FileStorage.readData("merged_" + name);
 
     // Get test list
     var test_list = FileStorage.readData('test_list');
@@ -172,13 +133,22 @@ var TestList = {
 
     var plot_tooltip = {
       formatter: function () {
-        if (this.series.name.indexOf('variation') != -1) return false;
         var o = this.point.options;
-
-        return '<b>' + this.series.name + '</b><br>' +
-          'Average: ' + this.y + '<br>' +
-          'Minimum: ' + o.min + '<br>' +
-          'Maximum: ' + o.max + '<br>';
+        if (this.series.name.indexOf('variation') != -1)
+        {
+          name = this.series.name.split("_variation")[0]
+          groundtruth_epsilon = (o.high - o.low)/2.0
+          groundtruth = o.low + groundtruth_epsilon
+          return '<b>' + name + '</b><br>' + 
+            'Groundtruth: ' + groundtruth.round(3) + '+-' + groundtruth_epsilon.round(3) + '<br>';
+        }
+        else
+        {
+          return '<b>' + this.series.name + '</b><br>' +
+            'Average: ' + this.y + '<br>' +
+            'Minimum: ' + o.min + '<br>' +
+            'Maximum: ' + o.max + '<br>';
+        }
       }
     };
 
@@ -393,8 +363,12 @@ var TestList = {
 
     var data_per_test = {};
 
+    number_of_testblocks = Object.keys(test_results).length
+    //console.log("number_of_testblocks=", number_of_testblocks)
+    testblock_number = 0
     $.each(test_results, function (testblock_name, testblock_data) {
       //console.log("testblock_name=", testblock_name);
+      //console.log("testblock_number=", testblock_number);
       //console.log("testblock_data=", testblock_data);
 
       if (testblock_data.hasOwnProperty('status') && testblock_data['status'] === 'error') {
@@ -414,7 +388,8 @@ var TestList = {
         //console.log("metric_list=", metric_list);
         if ((metric_name == 'time') || (metric_name == 'path_length') || (metric_name == 'publish_rate') || (metric_name == 'interface'))
         {
-          // Time
+          number_of_entries = Object.keys(metric_list).length
+          //console.log("number_of_entries=", number_of_entries)
           $.each(metric_list, function(entry_number, metric_data) {
             //console.log("entry_number=", entry_number)
             //console.log("metric_data=", metric_data)
@@ -427,20 +402,43 @@ var TestList = {
             if (metric_name == 'interface') chart_legend_name = testblock_name + "<br>(" + metric_data['details'] + ")"
             
             if (!data_per_test.hasOwnProperty(metric_name)) data_per_test[metric_name] = [];
+            
+            if (number_of_testblocks <= 1) {color_testblock = 0}
+            else {color_testblock = (testblock_number/(number_of_testblocks-1)*255).round(0)}
+
+            if (number_of_entries <= 1) {color_entry = 0}
+            else {color_entry = (entry_number/(number_of_entries-1)*255).round(0)}
+
+            rgb = [255-color_testblock, color_testblock, color_entry]
+            color = "rgb(" + rgb[0].toString() + ", " + rgb[1].toString() + ", " + rgb[2].toString() + ")"
+            //console.log("color=", color)
+
             data_per_test[metric_name].push({
               name: chart_legend_name,
               data: [{
-                x: 0,
+                x: testblock_number,
                 y: metric_key_data['average'].round(3),
                 min: metric_key_data['min'].round(3),
                 max: metric_key_data['max'].round(3)
-              }]
+              }],
+              color: color
             }, {
-              name: testblock_name + '_variation',
+              name: chart_legend_name + '_variation',
               type: 'errorbar',
               data: [{
+                x: testblock_number,
                 low: metric_key_data['min'].round(3),
                 high: metric_key_data['max'].round(3)
+              },
+              { 
+                x: testblock_number,
+                low: metric_data['groundtruth'] - metric_data['groundtruth_epsilon'],
+                high: metric_data['groundtruth'] + metric_data['groundtruth_epsilon'],
+                color: "rgb(0, 0, 255)",
+                stemWidth: 10,
+                stemColor: "rgba(255, 255, 255, 0)",
+                whiskerWidth: 3,
+                whiskerColor: "rgba(0, 0, 0, 0.5)"
               }]
             });
           })
@@ -545,11 +543,13 @@ var TestList = {
           });
         }
       });
+      testblock_number += 1
     });
 
     var details_per_test_panel = $('#details_per_test');
     details_per_test_panel.empty();
 
+    //console.log("data_per_test=", data_per_test)
     $.each(data_per_test, function (metric_name, data) {
       if (data.length != 0) test_details.show();
       details_per_test_panel.append('<div class="panel panel-primary"><div class="panel-heading"></div>' +
