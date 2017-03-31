@@ -141,9 +141,11 @@ class ATFRecorder:
             raise ATFRecorderError("Testblock '%s' not in test config" % trigger.name)
 
         # Send message to all recorder plugins
-        #print "self.recorder_plugin_list=", self.recorder_plugin_list
+        print "self.recorder_plugin_list=", self.recorder_plugin_list
         for recorder_plugin in self.recorder_plugin_list:
+            rospy.logerr("before trigger callback")
             recorder_plugin.trigger_callback(trigger)
+            rospy.logerr("after trigger callback")
 
         # Only process message if testblock requests topics
         #print "self.testblock_list=", self.testblock_list
