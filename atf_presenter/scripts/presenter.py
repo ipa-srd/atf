@@ -48,10 +48,11 @@ class presenter:
         self.numvals[str(num)]["trans"] = []
         self.numvals[str(num)]["rot"] = []
         print "len: " + str(len(self.numvals))
+        #print self.yaml_file
         for testblock, metrics in self.yaml_file.iteritems():
-            #print ("testblock: ", testblock)
+            print ("testblock: ", testblock)
             for metric, data in metrics.iteritems():
-                #print ("metric: ", metric)
+                print ("metric: ", metric)
                 self.metric.add(metric)
                 for values in data:
                     for name, result in values.iteritems():
@@ -59,19 +60,23 @@ class presenter:
                             i = 0
                             j = 0
                             for data_name in result:
-                                if isinstance(result[data_name], collections.Iterable):
-                                    for data_point in result[data_name]:
-                                        if data_name == "trans":
-                                            #print str(i) +": "+ str(data_point)
-                                            i = i + 1
-                                            self.numvals[str(num)]["trans"].append(data_point)
-                                        elif data_name == "rot":
-                                            #print str(j) + ": " + str(data_point)
-                                            j = j + 1
-                                            self.numvals[str(num)]["rot"].append(data_point)
-                                else:
-                                    self.numvals[str(num)][data_name] = result[data_name]
+                                if (data_name == "max"):
+                                    for key, vals in result[data_name].iteritems():
+                                        if isinstance(vals, collections.Iterable):
+                                            for data_point in vals:
+                                                if key == "trans":
+                                                    #print str(i) +": "+ str(data_point)
+                                                    i = i + 1
+                                                    self.numvals[str(num)]["trans"].append(data_point)
+                                                    #print self.numvals[str(num)]["trans"]
+                                                elif key == "rot":
+                                                    #print str(j) + ": " + str(data_point)
+                                                    j = j + 1
+                                                    self.numvals[str(num)]["rot"].append(data_point)
+                                        else:
+                                            self.numvals[str(num)][key] = vals
         plt.figure(1)
+        print self.numvals[str(num)].keys()
         self.box_plt = plt.boxplot(
             self.numvals[str(num)]["trans"], positions=[int(num)], widths=0.6)
         plt.plot([int(num) - 0.3, int(num), int(num) + 0.3],
