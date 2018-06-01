@@ -83,11 +83,11 @@ class RecordResources:
             try:
                 msg_data.node_name = node
 
-                msg_data.cpu = psutil.Process(pid).get_cpu_percent(interval=self.timer_interval)
+                msg_data.cpu = psutil.Process(pid).cpu_percent(interval=self.timer_interval)
 
-                msg_data.memory = psutil.Process(pid).get_memory_percent()
+                msg_data.memory = psutil.Process(pid).memory_percent()
 
-                data = findall('\d+', str(psutil.Process(pid).get_io_counters()))
+                data = findall('\d+', str(psutil.Process(pid).io_counters()))
                 msg_data.io.read_count = int(data[0])
                 msg_data.io.write_count = int(data[1])
                 msg_data.io.read_bytes = int(data[2])

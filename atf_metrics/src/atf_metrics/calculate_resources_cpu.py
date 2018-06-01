@@ -107,7 +107,7 @@ class CalculateResourcesCpu:
                         self.node_data[node][res]["min"] = float(round(min(self.node_data[node][res]["data"]), 2))
                         self.node_data[node][res]["max"] = float(round(max(self.node_data[node][res]["data"]), 2))
                         average_sum += float(round(numpy.mean(self.node_data[node][res]["data"]), 2))
-                        print "average sum:", average_sum
+                        print "average sum:", self.node_data[node][res]["average"], ", min:", self.node_data[node][res]["min"], "max:" , self.node_data[node][res]["max"]
                     del self.node_data[node][res]["data"]
 
                     details["sum of nodes"].append(node)
