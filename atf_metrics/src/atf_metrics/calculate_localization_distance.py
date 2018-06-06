@@ -64,13 +64,19 @@ class CalculateLocalizationDistance:
         self.measured_frame = measured_frame
         self.groundtruth_topic = groundtruth_topic
         self.groundtruth_frame = groundtruth_frame
-        self.tf_sampling_freq = 20.0
+        self.tf_sampling_freq = 2.
         self.finished = False
         self.delta_trans = []
         self.delta_rot =  []
+        self.max_pos_error = rospy.get_param("max_pos_error", 2.0)
+        self.max_ang_error = rospy.get_param("max_ang_error", 2.0)
+        self.fails = 0
+        self.fail_time = rospy.get_time()
+        self.fail_timeout = 5 #sec to wait until new fail is counted
         self.count = 0
         self.master = rosgraph.Master(rospy.get_name())
         self.listener = tf.TransformListener()
+        self.latest_gt_time = rospy.get_time()
         if groundtruth_topic is not None:
             self.sub = rospy.Subscriber(groundtruth_topic, rospy.AnyMsg, self.groundtruth_callback)
         elif groundtruth_frame is not None:
@@ -91,6 +97,9 @@ class CalculateLocalizationDistance:
         pass
 
     def groundtruth_callback(self, data):
+        if (rospy.get_time() - self.latest_gt_time) < (1. / self.tf_sampling_freq):
+            return
+        self.latest_gt_time = rospy.get_time()
         topic_types = self.master.getTopicTypes()
         msg_name = [ty for tp, ty in topic_types if tp == self.sub.name][0]
         msg_class = get_message_class(msg_name)
@@ -102,9 +111,9 @@ class CalculateLocalizationDistance:
                 rot_gt = PyKDL.Rotation.Quaternion(0.0,0.0,0.0,1)
                 self.listener.waitForTransform(self.root_frame,
                                                self.measured_frame,
-                                               rospy.Time(0),
+                                               msg.header.stamp, #rospy.Time(0),
                                                rospy.Duration.from_sec(1 /(2* self.tf_sampling_freq)))
-                (trans_loc, rot) = self.listener.lookupTransform(self.root_frame, self.measured_frame, rospy.Time(0))
+                (trans_loc, rot) = self.listener.lookupTransform(self.root_frame, self.measured_frame, msg.header.stamp)
                 print msg._type
                 if msg._type == 'geometry_msgs/PoseStamped':
                     trans_gt.append(msg.pose.position.x)
@@ -125,6 +134,10 @@ class CalculateLocalizationDistance:
                 self.delta_rot.append(delta_yaw)
                 rospy.loginfo("delta_yaw" + str(delta_yaw))
                 self.count = self.count + 1
+                if delta_trans > self.max_pos_error: #or delta_rot > self.max_ang_error:
+                    if rospy.get_time() > self.fail_time + self.fail_timeout:
+                        self.fails += 1
+                        self.fail_time = rospy.get_time()
             except (tf.Exception, tf.LookupException, tf.ConnectivityException) as e:
                 rospy.logwarn(e)
 
@@ -163,7 +176,7 @@ class CalculateLocalizationDistance:
             data["max_rot"] = max(data["rot"])
             data["avg_trans"] = np.mean(data["trans"])
             data["avg_rot"] = np.mean(data["rot"])
+            data["loc_fails"] = self.fails
             return "localization_distance", data, None, None, None, details
         else:
             return False
-
