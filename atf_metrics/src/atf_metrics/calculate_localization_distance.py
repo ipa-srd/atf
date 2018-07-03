@@ -68,8 +68,8 @@ class CalculateLocalizationDistance:
         self.finished = False
         self.delta_trans = []
         self.delta_rot =  []
-        self.max_pos_error = rospy.get_param("max_pos_error", 2.5)
-        self.max_ang_error = rospy.get_param("max_ang_error", 2.0)
+        self.max_pos_error = rospy.get_param("max_pos_error", 1.25)
+        self.max_ang_error = rospy.get_param("max_ang_error", 0.78)
         self.fails = 0
         self.fail_time = rospy.get_time()
         self.fail_timeout = 5 #sec to wait until new fail is counted
