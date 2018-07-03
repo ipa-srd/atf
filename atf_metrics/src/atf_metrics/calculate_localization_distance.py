@@ -111,7 +111,7 @@ class CalculateLocalizationDistance:
                 rot_gt = PyKDL.Rotation.Quaternion(0.0,0.0,0.0,1)
                 self.listener.waitForTransform(self.root_frame,
                                                self.measured_frame,
-                                               msg.header.stamp, #rospy.Time(0),
+                                               msg.header.stamp,
                                                rospy.Duration.from_sec(1 /(2* self.tf_sampling_freq)))
                 (trans_loc, rot) = self.listener.lookupTransform(self.root_frame, self.measured_frame, msg.header.stamp)
                 print msg._type
